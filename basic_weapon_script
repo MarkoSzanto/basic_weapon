@@ -1,0 +1,26 @@
+extends Node3D
+
+@export var damage: int = 20
+@export var fire_rate: float = 0.5  # Time between shots in seconds
+var can_fire: bool = true
+@onready var ray_cast: RayCast3D = $RayCast3D
+#nodes and stuff
+func _ready():
+	pass
+
+func fire():
+	if can_fire:
+		can_fire = false
+		# Perform raycast to detect hits
+		ray_cast.force_raycast_update()
+		if ray_cast.is_colliding():
+			var hit_object = ray_cast.get_collider()
+			# Check if the hit object is a player
+			if hit_object is Player:
+				# Deal damage to the player
+				hit_object.take_damage(damage)
+				print("Hit player")
+
+		# Start a timer to reset can_fire
+		await get_tree().create_timer(fire_rate).timeout
+		can_fire = true
