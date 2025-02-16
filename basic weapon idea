@@ -1,0 +1,86 @@
+extends Node
+
+# Weapon Stats
+@export var damage : int = 10
+@export var fire_rate : float = 0.2  # Seconds between shots
+@export var clip_size : int = 30
+@export var ammo_capacity : int = 90
+
+# Internal variables
+var current_clip : int = clip_size
+var is_firing : bool = false
+var can_fire : bool = true  # Prevents firing faster than fire_rate
+var time_since_last_shot : float = 0.0
+
+# Signals (Optional, for external communication)
+signal weapon_fired(damage, direction)
+signal ammo_changed(current_clip, ammo_left)
+
+
+func _ready():
+    # Initialize
+    update_ammo_display()
+
+func _process(delta):
+    if is_firing and can_fire:
+        try_fire()
+
+    time_since_last_shot += delta
+    if time_since_last_shot >= fire_rate:
+        can_fire = true
+
+
+func try_fire():
+    if current_clip > 0:
+        fire()
+        current_clip -= 1
+        update_ammo_display()
+        time_since_last_shot = 0.0
+        can_fire = false
+    else:
+        # Handle empty clip (e.g., play sound, reload)
+        print("Out of ammo in clip!")
+        #  Optionally, auto-reload if ammo is available.  You could add a `reload()` function.
+        #  if ammo_capacity > 0 and !is_reloading:
+        #  	reload()
+        #  ... or trigger a reload animation/event.
+
+
+func fire():
+    # Implement actual firing logic here.  This is where you'd instantiate projectiles,
+    # play a sound, trigger a visual effect, etc.
+    # Example:  Emitting a signal to notify other nodes that a shot was fired.
+    var direction = Vector3.FORWARD  # Replace with the actual direction.  Often the direction is based on the camera/weapon transform.
+    emit_signal("weapon_fired", damage, direction)
+    print("Shot fired! Damage: ", damage)
+
+
+func start_firing():
+    is_firing = true
+
+func stop_firing():
+    is_firing = false
+
+func reload():
+    if current_clip < clip_size and ammo_capacity > 0:
+        var amount_to_reload = clip_size - current_clip
+        var ammo_to_take = min(amount_to_reload, ammo_capacity)
+
+        current_clip += ammo_to_take
+        ammo_capacity -= ammo_to_take
+
+        update_ammo_display()
+        print("Reloaded. Current clip: ", current_clip, ", Ammo left: ", ammo_capacity)
+
+    else:
+        print("Cannot reload.")
+
+func update_ammo_display():
+    # This function *should not* handle UI directly.  It's designed to *emit* a signal with updated ammo values.
+    # The UI (e.g., a label) would then connect to this signal and update its display.
+    emit_signal("ammo_changed", current_clip, ammo_capacity)
+
+    # Example of how a GUI element might use this
+    # In the UI script:
+    # func _on_weapon_ammo_changed(current_clip, ammo_left):
+    #     ammo_label.text = str(current_clip) + " / " + str(ammo_left)
